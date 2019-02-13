@@ -10,6 +10,12 @@ import im.dig.trial.messenger.services.model.ReadSyntax._
 import im.dig.trial.messenger.services.model.{SessionId, UserId}
 
 
+/**
+  * Вспомогательный трейт для подмешивания в контроллер.
+  * Производит аутентификацию пользователя на основе
+  * cookie `sessionId` и передает во внутренний `Route`
+  * значение `userId`, полученное на основе токена сессии
+  */
 trait Authentication {
 
   protected def serviceApi: ServiceApi

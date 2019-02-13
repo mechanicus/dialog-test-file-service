@@ -4,6 +4,8 @@ import java.time.LocalDateTime
 
 import im.dig.trial.messenger.services.model.{FileId, Filename, SessionId, UserId}
 
+// здесь хранятся классы сообщений для выполнения
+// запросов к другим микросервисам
 
 sealed abstract class AuthServiceMessage
 @SerialVersionUID(1L)

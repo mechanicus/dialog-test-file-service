@@ -19,7 +19,12 @@ import im.dig.trial.messenger.services.model.{File, Filename, ReadSyntax, SHA256
 
 import scala.concurrent.ExecutionContext
 
-
+/**
+  * Класс контроллера, предоставляющий rest api для сохранения
+  * и загрузки файлов
+  * @param storageDirectoryPath - путь к каталогу, где будут храниться файлы
+  * @param serviceApi - scala api для crud- и auth- сервисов
+  */
 final class FileService(
   private val storageDirectoryPath: String,
   override protected val serviceApi: ServiceApi
@@ -37,21 +42,27 @@ final class FileService(
   override def routes(implicit mat: Materializer, ec: ExecutionContext): Route = {
     authenticated { userId =>
       pathPrefix("files") {
+        // загружаем файл на сервер
         path("upload") { post { withoutSizeLimit { fileUpload("file") {
           case (metadata, byteSource) =>
             import ReadSyntax._
+            // файл должен иметь кроссплатформенно допустимое имя
             metadata.fileName.readEither[Filename] match {
               case Right(originalName) =>
+                // генерируем идентификатор файла
                 val fileId = SHA256.generate()
+                // сохраняем файл с именем его идентификатора в каталоге хранилища
                 val stage1 = byteSource.runWith(
                   FileIO.toPath(Paths.get(storageDirectoryPath, fileId.show))
                 )
+                // отправляем метаинформацию о загруженном файле в crud-сервис
                 val stage2 = stage1.flatMap { _ =>
                   val uploadedOn = LocalDateTime.now()
                   serviceApi.storeFileInfo(fileId, userId, originalName, uploadedOn).map { _ =>
                     uploadedOn
                   }
                 }
+                // возвращаем клиенту метаинформацию о загруженном файле
                 onSuccess(stage2) { uploadedOn =>
                   val file = File(fileId, userId, originalName, uploadedOn)
                   complete(Responses.ok(file))
@@ -59,6 +70,7 @@ final class FileService(
               case Left(ex) => complete(Responses.badRequest(ex.getMessage))
             }
         }}}} ~
+        // скачиваем файл с сервера по `fileId`
         pathPrefix("download") { get {
           getFromDirectory(storageDirectoryPath)
         }}
